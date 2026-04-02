@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Belajar Pintar Ultimate AI</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+background:linear-gradient(135deg,#673ab7,#311b92);
+}
+.container{
+background:#fff;
+padding:20px;
+border-radius:15px;
+width:380px;
+}
+button,input,select{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:8px;
+}
+button{background:#673ab7;color:white;border:none;}
+.hidden{display:none;}
+.card{border:1px solid #ccc;padding:10px;margin-top:10px;border-radius:10px;}
+#materiText{max-height:200px;overflow:auto;white-space:pre-line;}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="pilih">
+<h2>Pilih Login</h2>
+<button onclick="show('loginSiswa')">Siswa</button>
+<button onclick="show('loginAdmin')">Admin</button>
+</div>
+
+<div class="container hidden" id="loginSiswa">
+<h2>Login Siswa</h2>
+<input id="nama" placeholder="Nama">
+<select id="kelas">
+<option value="">Pilih Kelas</option>
+<option>7</option>
+<option>8</option>
+<option>9</option>
+</select>
+<button onclick="loginSiswa()">Masuk</button>
+<button onclick="show('pilih')">Kembali</button>
+</div>
+
+<div class="container hidden" id="loginAdmin">
+<h2>Login Admin</h2>
+<input id="userAdmin" placeholder="Username">
+<input id="passAdmin" type="password" placeholder="Password">
+<button onclick="loginAdmin()">Masuk</button>
+<button onclick="show('pilih')">Kembali</button>
+</div>
+
+<div class="container hidden" id="menu">
+<h3 id="welcome"></h3>
+<button onclick="menuMapel()">Mulai Belajar</button>
+<button onclick="lihatRanking()">Ranking</button>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="container hidden" id="admin">
+<h3>Admin Panel</h3>
+<button onclick="lihatSemua()">Pantau Siswa</button>
+<button onclick="lihatRanking()">Ranking</button>
+<button onclick="resetData()">Reset Semua</button>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="container hidden" id="mapel">
+<h3>Pilih Pelajaran</h3>
+<div id="mapelList"></div>
+<button onclick="show('menu')">Kembali</button>
+</div>
+
+<div class="container hidden" id="mode">
+<h3 id="judulMapel"></h3>
+<button onclick="setMode('latihan')">Latihan</button>
+<button onclick="setMode('ujian')">Ujian</button>
+<button onclick="menuMapel()">Kembali</button>
+</div>
+
+<div class="container hidden" id="materi">
+<h3 id="judulMateri"></h3>
+<p id="materiText"></p>
+<button onclick="menuMapel()">Kembali</button>
+</div>
+
+<div class="container hidden" id="quiz">
+<h3 id="soal"></h3>
+<div id="opsi"></div>
+<p id="info"></p>
+</div>
+
+<div class="container hidden" id="penjelasan">
+<h3>Penjelasan</h3>
+<p id="hasilJawab"></p>
+<p id="aiExplain"></p>
+<button onclick="lanjut()">Lanjut</button>
+</div>
+
+<div class="container hidden" id="hasil">
+<h3 id="nilai"></h3>
+<button onclick="show('menu')">Menu</button>
+</div>
+
+<div class="container hidden" id="ranking">
+<h3>Ranking</h3>
+<ul id="rankList"></ul>
+<button onclick="show('menu')">Kembali</button>
+</div>
+
+<div class="container hidden" id="monitor">
+<h3>Data Siswa</h3>
+<div id="dataSiswa"></div>
+<button onclick="show('admin')">Kembali</button>
+</div>
+
+<script>
+
+// RESET HARIAN
+(function(){
+const today=new Date().toLocaleDateString();
+if(localStorage.getItem("lastReset")!==today){
+localStorage.removeItem("rank");
+localStorage.setItem("lastReset",today);
+}
+})();
+
+// GLOBAL
+let nama="",kelas="",mapel="";
+let soal=[],i=0,skor=0;
+let modeQuiz="latihan";
+let waktu=10,timer;
+
+// NAV
+function show(id){
+document.querySelectorAll(".container").forEach(x=>x.classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
+}
+
+// LOGIN SISWA
+function loginSiswa(){
+nama=document.getElementById("nama").value.trim();
+kelas=document.getElementById("kelas").value;
+if(!nama||!kelas){alert("Isi dulu!");return;}
+
+// simpan siswa
+let siswa=JSON.parse(localStorage.getItem("siswa"))||[];
+if(!siswa.find(s=>s.nama===nama && s.kelas===kelas)){
+siswa.push({nama,kelas});
+localStorage.setItem("siswa",JSON.stringify(siswa));
+}
+
+document.getElementById("welcome").innerText="Halo "+nama;
+show("menu");
+}
+
+// LOGIN ADMIN
+function loginAdmin(){
+if(userAdmin.value==="admin" && passAdmin.value==="542013"){
+show("admin");
+}else alert("Salah!");
+}
+
+function logout(){location.reload();}
+
+// MAPEL
+function menuMapel(){
+show("mapel");
+let m=["Matematika","IPA","Bahasa Indonesia","IPS","Informatika"];
+mapelList.innerHTML=m.map(x=>`<button onclick="pilih('${x}')">${x}</button>`).join("");
+}
+
+function pilih(m){
+mapel=m;
+judulMapel.innerText=m+" kelas "+kelas;
+show("mode");
+}
+
+// MODE
+function setMode(m){
+modeQuiz=m;
+mulaiQuiz();
+}
+
+// MATERI
+function lihatMateri(){
+show("materi");
+let materi={
+Matematika:{7:"Bilangan & pecahan.",8:"Aljabar.",9:"Peluang & statistika."},
+IPA:{7:"Makhluk hidup.",8:"Energi.",9:"Listrik."},
+"Bahasa Indonesia":{7:"Deskripsi.",8:"Eksplanasi.",9:"Argumentasi."},
+IPS:{7:"Geografi.",8:"Ekonomi.",9:"Globalisasi."},
+Informatika:{7:"Komputer.",8:"Internet.",9:"Coding."}
+};
+judulMateri.innerText=mapel;
+materiText.innerText=materi[mapel][kelas];
+}
+
+// ACAK
+function acak(a){
+for(let i=a.length-1;i>0;i--){
+let j=Math.floor(Math.random()*(i+1));
+[a[i],a[j]]=[a[j],a[i]];
+}
+return a;
+}
+
+// GENERATOR
+function generate(){
+
+if(mapel==="Matematika"){
+let t=Math.floor(Math.random()*3);
+
+if(t===0){
+let a=Math.floor(Math.random()*50)+10;
+let b=Math.floor(Math.random()*10)+2;
+let h=a+(b*2);
+return {q:`${a}+(${b}x2)=?`,o:[h,h+5,h-3,h+10],a:h.toString(),ex:"Perkalian dulu"};
+}
+
+if(t===1){
+let a=Math.floor(Math.random()*50)+20;
+let b=Math.floor(Math.random()*10)+1;
+let h=a-b;
+return {q:`${a}-${b}=?`,o:[h,h+4,h-2,h+6],a:h.toString(),ex:"Pengurangan"};
+}
+
+let a=Math.floor(Math.random()*10)+2;
+let b=Math.floor(Math.random()*10)+2;
+let h=a*b;
+return {q:`${a}x${b}=?`,o:[h,h+3,h-2,h+5],a:h.toString(),ex:"Perkalian"};
+}
+
+if(mapel==="IPA") return {q:"Fotosintesis menghasilkan?",o:["Oksigen","CO2","Air","Energi"],a:"Oksigen",ex:"Tumbuhan menghasilkan oksigen"};
+if(mapel==="Bahasa Indonesia") return {q:"Antonim besar?",o:["Kecil","Tinggi","Luas","Panjang"],a:"Kecil",ex:"Lawan kata"};
+if(mapel==="IPS") return {q:"Globalisasi artinya?",o:["Mendunia","Lokal","Desa","Sempit"],a:"Mendunia",ex:"Mendunia"};
+if(mapel==="Informatika") return {q:"CPU adalah?",o:["Otak komputer","Mouse","Keyboard","Monitor"],a:"Otak komputer",ex:"Pusat proses"};
+
+}
+
+// QUIZ
+function mulaiQuiz(){
+soal=[];
+let set=new Set();
+
+while(soal.length<10){
+let s=generate();
+if(!set.has(s.q)){
+set.add(s.q);
+s.o=acak(s.o);
+soal.push(s);
+}
+}
+
+i=0;skor=0;
+show("quiz");
+tampil();
+}
+
+// TIMER
+function startTimer(){
+clearInterval(timer);
+waktu=10;
+timer=setInterval(()=>{
+info.innerText="Soal "+(i+1)+" | Waktu: "+waktu;
+waktu--;
+if(waktu<0){
+clearInterval(timer);
+lanjut();
+}
+},1000);
+}
+
+// TAMPIL
+function tampil(){
+let s=soal[i];
+soalEl=document.getElementById("soal");
+opsiEl=document.getElementById("opsi");
+
+soalEl.innerText=s.q;
+opsiEl.innerHTML=s.o.map(o=>`<button onclick="jawab('${o}')">${o}</button>`).join("");
+
+startTimer();
+}
+
+// JAWAB
+function jawab(p){
+clearInterval(timer);
+let s=soal[i];
+if(p===s.a) skor++;
+
+if(modeQuiz==="ujian"){lanjut();return;}
+
+hasilJawab.innerText=p===s.a?"Benar":"Salah (Jawaban: "+s.a+")";
+aiExplain.innerText=s.ex;
+show("penjelasan");
+}
+
+// LANJUT
+function lanjut(){
+i++;
+if(i<soal.length){show("quiz");tampil();}
+else selesai();
+}
+
+// SELESAI
+function selesai(){
+clearInterval(timer);
+show("hasil");
+
+let nilai=Math.round((skor/soal.length)*100);
+nilaiEl=document.getElementById("nilai");
+nilaiEl.innerText="Nilai: "+nilai;
+
+let data=JSON.parse(localStorage.getItem("data"))||[];
+let s=data.find(d=>d.nama===nama);
+
+if(s){
+s.total=(s.total||0)+1;
+s.nilaiTertinggi=Math.max(s.nilaiTertinggi||0,nilai);
+s.nilai=nilai;
+}else{
+data.push({nama,kelas,nilai,total:1,nilaiTertinggi:nilai});
+}
+
+localStorage.setItem("data",JSON.stringify(data));
+
+let r=JSON.parse(localStorage.getItem("rank"))||[];
+r.push({nama,nilai});
+r.sort((a,b)=>b.nilai-a.nilai);
+r=r.slice(0,5);
+localStorage.setItem("rank",JSON.stringify(r));
+}
+
+// RANKING
+function lihatRanking(){
+show("ranking");
+let r=JSON.parse(localStorage.getItem("rank"))||[];
+rankList.innerHTML=r.map((x,i)=>`<li>${i+1}. ${x.nama} - ${x.nilai}</li>`).join("");
+}
+
+// ADMIN
+function lihatSemua(){
+show("monitor");
+let data=JSON.parse(localStorage.getItem("data"))||[];
+dataSiswa.innerHTML=data.map(d=>`
+<div class="card">
+<b>${d.nama}</b> (Kelas ${d.kelas})<br>
+Nilai: ${d.nilai}<br>
+Tertinggi: ${d.nilaiTertinggi}<br>
+Total Quiz: ${d.total}
+</div>`).join("");
+}
+
+function resetData(){
+localStorage.clear();
+alert("Data dihapus");
+}
+
+</script>
+
+</body>
+</html>
